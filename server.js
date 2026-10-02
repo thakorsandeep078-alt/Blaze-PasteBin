@@ -6,14 +6,20 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ensure the uploads directory exists
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Configure Multer
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => cb(null, 'latest-screenshot' + path.extname(file.originalname))
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, 'latest-screenshot' + path.extname(file.originalname));
+    }
 });
 const upload = multer({ storage: storage });
 
@@ -24,12 +30,18 @@ app.use(express.urlencoded({ extended: true }));
 let latestCode = "";
 let latestImage = null;
 
+// Route to handle new uploads
 app.post('/share', upload.single('screenshot'), (req, res) => {
-    if (req.body.code) latestCode = req.body.code;
-    if (req.file) latestImage = req.file.filename;
+    if (req.body.code) {
+        latestCode = req.body.code;
+    }
+    if (req.file) {
+        latestImage = req.file.filename;
+    }
     res.redirect('/');
 });
 
+// Route to fetch current clipboard
 app.get('/api/latest', (req, res) => {
     res.json({
         code: latestCode,
@@ -37,4 +49,19 @@ app.get('/api/latest', (req, res) => {
     });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Route to clear the clipboard
+app.post('/api/clear', (req, res) => {
+    latestCode = "";
+    if (latestImage) {
+        const imagePath = path.join(uploadDir, latestImage);
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+        }
+        latestImage = null;
+    }
+    res.json({ success: true });
+});
+
+app.listen(PORT, () => {
+    console.log(`Clipboard server running on port ${PORT}`);
+});
