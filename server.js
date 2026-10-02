@@ -29,14 +29,21 @@ app.use(express.urlencoded({ extended: true }));
 
 let latestCode = "";
 let latestImage = null;
+let lastUpdated = Date.now(); // Track when it was last changed
 
 // Route to handle new uploads
 app.post('/share', upload.single('screenshot'), (req, res) => {
-    if (req.body.code) {
+    let changed = false;
+    if (req.body.code !== undefined && req.body.code !== latestCode) {
         latestCode = req.body.code;
+        changed = true;
     }
     if (req.file) {
         latestImage = req.file.filename;
+        changed = true;
+    }
+    if (changed) {
+        lastUpdated = Date.now();
     }
     res.redirect('/');
 });
@@ -45,7 +52,8 @@ app.post('/share', upload.single('screenshot'), (req, res) => {
 app.get('/api/latest', (req, res) => {
     res.json({
         code: latestCode,
-        image: latestImage ? `/uploads/${latestImage}` : null
+        image: latestImage ? `/uploads/${latestImage}` : null,
+        updatedAt: lastUpdated
     });
 });
 
@@ -59,6 +67,7 @@ app.post('/api/clear', (req, res) => {
         }
         latestImage = null;
     }
+    lastUpdated = Date.now();
     res.json({ success: true });
 });
 
