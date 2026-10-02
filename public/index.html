@@ -215,53 +215,31 @@
     </div>
 
     <script>
-        // Update file name text when an image is selected
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const fileName = e.target.files[0] ? e.target.files[0].name : 'Click or drag a screenshot here';
-            document.getElementById('fileName').innerText = '🖼️ ' + fileName;
-        });
-
-        async function loadLatest() {
-            try {
-                const res = await fetch('/api/latest');
-                const data = await res.json();
-                
-                const codeElement = document.getElementById('displayCode');
-                if (data.code) {
-                    codeElement.textContent = data.code;
-                    codeElement.classList.remove('empty-state');
-                    // Apply syntax highlighting to the new code
-                    hljs.highlightElement(codeElement);
+        // Listen for Ctrl+V / Cmd+V anywhere on the page
+        document.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            
+            for (let i = 0; i < items.length; i++) {
+                // Check if the pasted item is an image
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    
+                    // Programmatically attach the pasted file to our file input
+                    const dataTransfer = new DataTransfer();
+                    const newFile = new File([file], "pasted-snip.png", { type: file.type });
+                    dataTransfer.items.add(newFile);
+                    
+                    document.getElementById('fileInput').files = dataTransfer.files;
+                    
+                    // Update the UI to show it worked
+                    document.getElementById('fileName').innerText = '📸 Snippet pasted! (Ready to push)';
+                    document.querySelector('.file-upload-wrapper').style.borderColor = 'var(--accent)';
+                    document.querySelector('.file-upload-wrapper').style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                    
+                    break; // Stop after finding the first image
                 }
-
-                if (data.image) {
-                    document.getElementById('displayImage').innerHTML = `<img src="${data.image}?t=${Date.now()}" alt="Shared Screenshot">`;
-                }
-            } catch (error) {
-                console.error("Failed to load clipboard data.");
             }
-        }
-
-        function copyCode() {
-            const codeText = document.getElementById('displayCode').textContent;
-            if(codeText === 'No code shared yet.') return;
-
-            navigator.clipboard.writeText(codeText).then(() => {
-                const btn = document.getElementById('copyBtn');
-                btn.innerText = "✓ Copied";
-                btn.style.backgroundColor = "rgba(16, 185, 129, 0.2)"; // Green success tint
-                btn.style.borderColor = "rgba(16, 185, 129, 0.4)";
-                btn.style.color = "#34d399";
-                
-                setTimeout(() => {
-                    btn.innerText = "Copy Code";
-                    btn.style = ""; // Reset styles
-                }, 2000);
-            });
-        }
-
-        // Load data on page load
-        loadLatest();
+        });
     </script>
 </body>
 </html>
